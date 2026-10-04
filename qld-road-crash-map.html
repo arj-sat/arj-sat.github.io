@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Queensland Road Crash Map — Arjun Satish</title>
+  <meta name="description" content="An interactive ArcGIS map of 66,623 injury crashes on Queensland roads from 2020 to 2024, built from Transport and Main Roads open data.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Epilogue:wght@300;400;500;700;900&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+
+  <!-- Loads the ArcGIS embeddable map component -->
+  <script type="module" src="https://js.arcgis.com/5.1/embeddable-components/"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080808;
+      --surface: #0f0f0f;
+      --border: #1a1a1a;
+      --border2: #242424;
+      --text: #ede9e3;
+      --muted: #4a4a4a;
+      --muted2: #6a6a6a;
+      --accent: #e8d5a3;
+      --accent2: #a8c5a0;
+      --font-serif: 'Instrument Serif', serif;
+      --font-sans: 'Epilogue', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.5;
+    }
+
+    a:focus-visible, arcgis-embedded-map:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    /* NAV (same as main site) */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1.6rem 4rem;
+      background: rgba(8,8,8,0.9);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: var(--font-sans);
+      font-size: 0.85rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text); text-decoration: none;
+    }
+
+    .nav-links { display: flex; gap: 3rem; list-style: none; }
+
+    .nav-links a {
+      font-family: var(--font-mono); font-size: 0.72rem;
+      color: var(--muted2); text-decoration: none;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--accent); }
+
+    /* PAGE HERO */
+    .page-hero { padding: 9rem 4rem 3.5rem; max-width: 70rem; }
+
+    .hero-eyebrow {
+      display: flex; align-items: center; gap: 0.8rem;
+      margin-bottom: 2rem;
+      opacity: 0; animation: fadeUp 0.5s ease forwards 0.1s;
+    }
+    .hero-eyebrow-line { width: 32px; height: 1px; background: var(--accent); }
+    .hero-eyebrow span {
+      font-family: var(--font-mono); font-size: 0.72rem;
+      color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase;
+    }
+
+    .hero-name {
+      font-family: var(--font-sans);
+      font-size: clamp(2.8rem, 6vw, 5.5rem); font-weight: 900;
+      line-height: 1.0; letter-spacing: -0.04em; margin-bottom: 0.8rem;
+      opacity: 0; animation: fadeUp 0.6s ease forwards 0.2s;
+    }
+    .hero-name em { font-style: normal; color: var(--accent); }
+
+    .hero-role {
+      font-family: var(--font-mono); font-size: 0.8rem;
+      color: var(--muted2); letter-spacing: 0.1em; text-transform: uppercase;
+      margin-bottom: 2rem;
+      opacity: 0; animation: fadeUp 0.6s ease forwards 0.35s;
+    }
+
+    .hero-desc {
+      font-size: 1rem; font-weight: 300; color: var(--muted2);
+      line-height: 1.8; max-width: 56ch; margin-bottom: 2.5rem;
+      opacity: 0; animation: fadeUp 0.6s ease forwards 0.5s;
+    }
+    .hero-desc strong { color: var(--text); font-weight: 500; }
+
+    .hero-actions {
+      display: flex; gap: 1rem; flex-wrap: wrap;
+      opacity: 0; animation: fadeUp 0.6s ease forwards 0.65s;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.7rem 1.6rem;
+      font-family: var(--font-mono); font-size: 0.75rem;
+      letter-spacing: 0.1em; text-decoration: none;
+      border-radius: 2px; transition: all 0.22s; text-transform: uppercase;
+    }
+    .btn-primary { background: var(--accent); color: #0a0a0a; }
+    .btn-primary:hover { background: var(--text); transform: translateY(-2px); }
+    .btn-ghost { border: 1px solid var(--border2); color: var(--muted2); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
+
+    /* MAP */
+    #map-section { padding: 0 4rem 1rem; }
+
+    .map-wrap {
+      border: 1px solid var(--border2);
+      background: var(--surface);
+      padding: 6px;
+    }
+
+    arcgis-embedded-map {
+      display: block;
+      width: 100%;
+      height: clamp(460px, 76vh, 780px);
+      background: #0b0b0b;
+    }
+
+    .map-note {
+      font-family: var(--font-mono); font-size: 0.7rem;
+      color: var(--muted2); letter-spacing: 0.06em; line-height: 1.7;
+      margin-top: 1rem;
+    }
+    .map-note a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(232,213,163,0.3); }
+    .map-note a:hover { color: var(--text); border-color: var(--text); }
+
+    /* SECTIONS */
+    section { padding: 6rem 4rem; }
+
+    .section-label {
+      font-family: var(--font-mono); font-size: 0.68rem;
+      color: var(--muted); letter-spacing: 0.22em; text-transform: uppercase;
+      margin-bottom: 3rem; display: flex; align-items: center; gap: 1rem;
+    }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .section-title {
+      font-family: var(--font-serif); font-size: clamp(2.2rem, 4vw, 3.5rem);
+      font-weight: 400; line-height: 1.1; letter-spacing: -0.01em;
+    }
+    .section-title em { font-style: italic; color: var(--accent); }
+
+    /* ABOUT */
+    #about { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+    .about-grid { display: grid; grid-template-columns: 1fr 1.6fr; gap: 6rem; align-items: start; }
+
+    .about-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 2rem; }
+    .about-tag {
+      font-family: var(--font-mono); font-size: 0.68rem;
+      color: var(--accent2); border: 1px solid rgba(168,197,160,0.25);
+      padding: 0.3rem 0.7rem; border-radius: 2px; letter-spacing: 0.06em;
+    }
+
+    .about-body p {
+      font-size: 1rem; font-weight: 300; color: var(--muted2);
+      line-height: 1.9; margin-bottom: 1.5rem;
+    }
+    .about-body p:last-child { margin-bottom: 0; }
+    .about-body strong { color: var(--text); font-weight: 500; }
+    .about-body em { font-family: var(--font-serif); font-style: italic; color: var(--accent); }
+
+    /* KEY FIGURES */
+    .figures { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin-top: 4rem; }
+
+    .stat-card {
+      background: var(--bg); border: 1px solid var(--border);
+      padding: 1.6rem 2rem; position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0;
+      width: 3px; height: 100%; background: var(--accent); opacity: 0.5;
+    }
+    .stat-card.fatal::before { background: #c0564a; opacity: 0.8; }
+    .stat-label {
+      font-family: var(--font-mono); font-size: 0.65rem;
+      color: var(--muted); letter-spacing: 0.18em; text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+    .stat-value {
+      font-family: var(--font-serif); font-size: 2rem;
+      font-style: italic; color: var(--text); line-height: 1.2;
+    }
+    .stat-value small {
+      font-family: var(--font-mono); font-size: 0.68rem;
+      font-style: normal; color: var(--muted2); display: block; margin-top: 0.4rem; line-height: 1.5;
+    }
+
+    /* FINDINGS */
+    .findings-intro {
+      font-size: 0.9rem; font-weight: 300; color: var(--muted2);
+      line-height: 1.8; max-width: 60ch; margin-top: 1.5rem;
+    }
+    .findings-grid {
+      display: grid; grid-template-columns: 1fr 1fr; margin-top: 3.5rem;
+      border-top: 1px solid var(--border); border-left: 1px solid var(--border);
+    }
+    .finding-cell {
+      border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      padding: 1.8rem; transition: background 0.2s;
+    }
+    .finding-cell:hover { background: var(--surface); }
+    .finding-name { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 0.5rem; }
+    .finding-text { font-size: 0.9rem; font-weight: 300; color: var(--muted2); line-height: 1.75; }
+    .finding-cell.caution .finding-name { color: var(--accent); }
+
+    /* METHOD (reuses the project row style) */
+    #method { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+    .method-list { display: flex; flex-direction: column; gap: 1px; margin-top: 3.5rem; }
+    .method-row {
+      display: grid; grid-template-columns: 60px 1fr;
+      align-items: start; gap: 2rem;
+      padding: 1.8rem 2.5rem;
+      background: var(--bg); border: 1px solid var(--border);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .method-row:hover { background: #0d0d0d; border-color: var(--border2); }
+    .method-num { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); letter-spacing: 0.1em; padding-top: 0.3rem; }
+    .method-title { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 0.3rem; }
+    .method-desc { font-family: var(--font-mono); font-size: 0.73rem; color: var(--muted2); line-height: 1.7; }
+
+    .tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 2rem; }
+    .tag {
+      font-family: var(--font-mono); font-size: 0.62rem;
+      color: var(--muted2); border: 1px solid var(--border);
+      padding: 0.2rem 0.5rem; border-radius: 2px; letter-spacing: 0.05em;
+    }
+
+    /* LIMITATIONS CALLOUT (same as research bar) */
+    .research-bar {
+      margin: 6rem 4rem 0;
+      padding: 2rem 2.5rem;
+      background: rgba(232,213,163,0.04);
+      border: 1px solid rgba(232,213,163,0.15);
+      border-radius: 3px;
+      display: flex; align-items: flex-start; gap: 1.5rem;
+    }
+    .research-icon { font-size: 1.2rem; color: var(--accent); flex-shrink: 0; margin-top: 0.1rem; }
+    .research-bar p { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted2); line-height: 1.75; }
+    .research-bar p + p { margin-top: 0.8rem; }
+    .research-bar strong { color: var(--accent); font-weight: 400; }
+
+    /* FOOTER */
+    footer {
+      margin-top: 6rem;
+      padding: 1.8rem 4rem; border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; gap: 2rem;
+    }
+    .footer-copy, .footer-note {
+      font-family: var(--font-mono); font-size: 0.68rem;
+      color: var(--muted); letter-spacing: 0.06em; line-height: 1.7;
+    }
+    .footer-note { text-align: right; max-width: 52ch; }
+
+    /* ANIMATIONS */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .reveal {
+      opacity: 0; transform: translateY(18px);
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+    .delay-1 { transition-delay: 0.12s; }
+    .delay-2 { transition-delay: 0.24s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hero-eyebrow, .hero-name, .hero-role, .hero-desc, .hero-actions { animation: none; opacity: 1; }
+      .reveal { opacity: 1; transform: none; transition: none; }
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      nav { padding: 1.2rem 1.5rem; }
+      .nav-links { gap: 1.5rem; }
+      .page-hero { padding: 8rem 1.5rem 2.5rem; }
+      #map-section { padding: 0 1.5rem 1rem; }
+      section { padding: 4rem 1.5rem; }
+      .about-grid { grid-template-columns: 1fr; gap: 3rem; }
+      .figures { grid-template-columns: 1fr 1fr; margin-top: 3rem; }
+      .findings-grid { grid-template-columns: 1fr; }
+      .method-row { grid-template-columns: 40px 1fr; padding: 1.5rem; gap: 1rem; }
+      .research-bar { margin: 4rem 1.5rem 0; }
+      footer { padding: 1.5rem; flex-direction: column; gap: 0.8rem; text-align: center; }
+      .footer-note { text-align: center; }
+    }
+    @media (max-width: 520px) {
+      .figures { grid-template-columns: 1fr; }
+      .nav-links li:nth-child(-n+2) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">Arjun Satish</a>
+  <ul class="nav-links">
+    <li><a href="index.html#about">About</a></li>
+    <li><a href="index.html#skills">Skills</a></li>
+    <li><a href="index.html#projects">Projects</a></li>
+    <li><a href="index.html#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- PAGE HERO -->
+<header class="page-hero">
+  <div class="hero-eyebrow">
+    <div class="hero-eyebrow-line"></div>
+    <span>Project — GIS &amp; Data</span>
+  </div>
+  <h1 class="hero-name">Serious road crashes in <em>Queensland</em></h1>
+  <p class="hero-role">2020 – 2024 · ArcGIS Online · Python</p>
+  <p class="hero-desc">
+    An interactive map of <strong>66,623 crashes</strong> in which someone was injured or killed on Queensland roads,
+    built to show where the most serious crashes happen and in what conditions.
+  </p>
+  <div class="hero-actions">
+    <a href="index.html#projects" class="btn btn-ghost">← All projects</a>
+    <a href="https://www.arcgis.com/home/item.html?id=acc4391011334e1a8e892eb1100833b2" target="_blank" rel="noopener" class="btn btn-primary">Open in ArcGIS ↗</a>
+  </div>
+</header>
+
+<!-- MAP -->
+<div id="map-section">
+  <div class="map-wrap">
+    <arcgis-embedded-map
+      item-id="acc4391011334e1a8e892eb1100833b2"
+      portal-url="https://www.arcgis.com"
+      theme="dark"
+      center="146.70324098105726,-21.319867764960655"
+      scale="4622324.434309"
+      bookmarks-enabled
+      heading-enabled
+      legend-enabled
+      information-enabled
+      share-enabled
+      scroll-enabled
+      time-zone-label-enabled
+      aria-label="Interactive map of injury crashes on Queensland roads, 2020 to 2024"></arcgis-embedded-map>
+    <noscript>
+      <p class="map-note">This map needs JavaScript. You can open it directly in ArcGIS Online instead.</p>
+    </noscript>
+  </div>
+  <p class="map-note">Zoom in and click a crash for its details. The legend shows how crashes are coloured by severity.</p>
+</div>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="about-grid">
+    <div class="reveal">
+      <div class="section-label">01 — About</div>
+      <h2 class="section-title">Where do the worst crashes <em>happen?</em></h2>
+      <div class="about-tags">
+        <span class="about-tag">GIS</span>
+        <span class="about-tag">Road Safety</span>
+        <span class="about-tag">Open Data</span>
+        <span class="about-tag">Web Mapping</span>
+      </div>
+    </div>
+    <div class="about-body reveal delay-1">
+      <p>
+        Road safety teams have to decide where to put limited money and attention. This map is a starting point for that question:
+        it shows <strong>every injury crash reported on Queensland roads over five years</strong>, so patterns by place,
+        speed zone, lighting and time of day are easy to spot.
+      </p>
+      <p>
+        Each point is one crash, coloured by its most serious outcome: <em>fatal</em>, hospitalisation, medical treatment or minor injury.
+        Clicking a crash opens a pop-up with the crash type, suburb, speed limit, lighting, road surface, time and number of casualties.
+      </p>
+      <p>
+        I built it as a portfolio project to practise taking a large public dataset from <strong>raw download to a published, shareable web map</strong>.
+      </p>
+    </div>
+  </div>
+
+  <div class="figures">
+    <div class="stat-card reveal">
+      <div class="stat-label">Injury crashes</div>
+      <div class="stat-value">66,623<small>2020 – 2024</small></div>
+    </div>
+    <div class="stat-card fatal reveal delay-1">
+      <div class="stat-label">Fatal crashes</div>
+      <div class="stat-value">1,304<small>1,424 people killed</small></div>
+    </div>
+    <div class="stat-card reveal delay-2">
+      <div class="stat-label">With hospitalisation</div>
+      <div class="stat-value">31,921<small>39,493 people hospitalised</small></div>
+    </div>
+    <div class="stat-card reveal delay-2">
+      <div class="stat-label">Total casualties</div>
+      <div class="stat-value">88,608<small>All injury levels</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- FINDINGS -->
+<section id="findings">
+  <div class="reveal">
+    <div class="section-label">02 — Findings</div>
+    <h2 class="section-title">What the data <em>shows.</em></h2>
+    <p class="findings-intro">
+      These patterns come from serious crashes, meaning fatal crashes and crashes with hospitalisation.
+      They describe how outcomes differ, not how likely a crash is.
+    </p>
+  </div>
+
+  <div class="findings-grid reveal delay-1">
+    <div class="finding-cell">
+      <div class="finding-name">Faster roads, deadlier crashes</div>
+      <div class="finding-text">About 8.6% of serious crashes in 110 km/h zones were fatal, against about 2% in zones of 60 km/h or less.</div>
+    </div>
+    <div class="finding-cell">
+      <div class="finding-name">Remote areas fare worst</div>
+      <div class="finding-text">Around 8.8% of serious crashes in remote areas were fatal, against 2.4% in major cities.</div>
+    </div>
+    <div class="finding-cell">
+      <div class="finding-name">Vulnerable road users</div>
+      <div class="finding-text">Pedestrians, motorcyclists or cyclists were involved in 39.8% of fatal crashes, against 29.4% of all serious crashes.</div>
+    </div>
+    <div class="finding-cell">
+      <div class="finding-name">Darkness adds risk</div>
+      <div class="finding-text">36.7% of fatal crashes happened in the dark, against 28.3% of serious crashes.</div>
+    </div>
+    <div class="finding-cell">
+      <div class="finding-name">Southern Queensland</div>
+      <div class="finding-text">It recorded 326 fatal crashes, against 183 in the Metropolitan region, even though Metropolitan has the most serious crashes overall.</div>
+    </div>
+    <div class="finding-cell caution">
+      <div class="finding-name">Read with care</div>
+      <div class="finding-text">The data has no traffic volumes, so these are counts and shares, not crash rates per kilometre driven.</div>
+    </div>
+  </div>
+</section>
+
+<!-- METHOD -->
+<section id="method">
+  <div class="reveal">
+    <div class="section-label">03 — Method</div>
+    <h2 class="section-title">How I <em>built it.</em></h2>
+  </div>
+
+  <div class="method-list">
+    <div class="method-row reveal">
+      <div class="method-num">001</div>
+      <div>
+        <div class="method-title">Sourced the data</div>
+        <div class="method-desc">Downloaded the crash locations data published by Transport and Main Roads on the Queensland Government open data portal.</div>
+      </div>
+    </div>
+    <div class="method-row reveal delay-1">
+      <div class="method-num">002</div>
+      <div>
+        <div class="method-title">Cleaned it in Python</div>
+        <div class="method-desc">With pandas: kept 2020 to 2024, removed columns the map does not need, checked for duplicates, and confirmed every crash has coordinates inside Queensland.</div>
+      </div>
+    </div>
+    <div class="method-row reveal delay-1">
+      <div class="method-num">003</div>
+      <div>
+        <div class="method-title">Made it readable</div>
+        <div class="method-desc">Converted coded severity values into plain labels so the legend and pop-ups make sense to a general audience.</div>
+      </div>
+    </div>
+    <div class="method-row reveal delay-2">
+      <div class="method-num">004</div>
+      <div>
+        <div class="method-title">Published and designed the map</div>
+        <div class="method-desc">Published to ArcGIS Online as a hosted feature layer, then built the web map with severity symbology, pop-ups, bookmarks and a legend, and embedded it here.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tags reveal">
+    <span class="tag">Python</span><span class="tag">pandas</span><span class="tag">ArcGIS Online</span><span class="tag">Hosted feature layers</span><span class="tag">Web mapping</span>
+  </div>
+</section>
+
+<!-- DATA & LIMITATIONS -->
+<div class="research-bar reveal">
+  <div class="research-icon">⬡</div>
+  <div>
+    <p>
+      <strong>Data and limitations:</strong> Only crashes reported to police are included, and recent records are preliminary and may change.
+      Busy roads and populous areas show more crashes simply because more people travel there, so this map is not a ranking of how dangerous a road is.
+    </p>
+    <p>
+      <strong>Source:</strong> State of Queensland (Department of Transport and Main Roads), Crash data from Queensland roads,
+      published on the Queensland Government open data portal under a Creative Commons Attribution 4.0 licence.
+    </p>
+  </div>
+</div>
+
+<footer>
+  <span class="footer-copy">© 2026 Arjun Satish</span>
+  <span class="footer-note">Masters in Computing · ANU · Building CognIA</span>
+</footer>
+
+<script>
+  // Scroll reveal (same as main site)
+  const reveals = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.08 });
+  reveals.forEach(el => io.observe(el));
+</script>
+</body>
+</html>

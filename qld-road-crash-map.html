@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Queensland Road Crash Map — Arjun Satish</title>
-  <meta name="description" content="An interactive ArcGIS map of 66,623 injury crashes on Queensland roads from 2020 to 2024, built from Transport and Main Roads open data.">
+  <meta name="description" content="Two interactive ArcGIS maps of Queensland road crashes from 2020 to 2024: a heat map of fatal crashes in Brisbane and a statewide map of 66,623 injury crashes, built from Transport and Main Roads open data.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Epilogue:wght@300;400;500;700;900&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
 
@@ -134,8 +134,20 @@
     .btn-ghost { border: 1px solid var(--border2); color: var(--muted2); }
     .btn-ghost:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
 
-    /* MAP */
-    #map-section { padding: 0 4rem 1rem; }
+    /* MAPS */
+    .map-section { padding: 0 4rem 4rem; }
+
+    .map-head { max-width: 70rem; margin-bottom: 1.8rem; }
+    .map-head .section-label { margin-bottom: 1.5rem; }
+    .map-title {
+      font-family: var(--font-serif); font-size: clamp(1.9rem, 3.2vw, 2.8rem);
+      font-weight: 400; line-height: 1.1; letter-spacing: -0.01em; margin-bottom: 1rem;
+    }
+    .map-title em { font-style: italic; color: var(--accent); }
+    .map-intro {
+      font-size: 0.95rem; font-weight: 300; color: var(--muted2);
+      line-height: 1.8; max-width: 62ch;
+    }
 
     .map-wrap {
       border: 1px solid var(--border2);
@@ -311,7 +323,7 @@
       nav { padding: 1.2rem 1.5rem; }
       .nav-links { gap: 1.5rem; }
       .page-hero { padding: 8rem 1.5rem 2.5rem; }
-      #map-section { padding: 0 1.5rem 1rem; }
+      .map-section { padding: 0 1.5rem 3rem; }
       section { padding: 4rem 1.5rem; }
       .about-grid { grid-template-columns: 1fr; gap: 3rem; }
       .figures { grid-template-columns: 1fr 1fr; margin-top: 3rem; }
@@ -348,17 +360,57 @@
   <h1 class="hero-name">Serious road crashes in <em>Queensland</em></h1>
   <p class="hero-role">2020 – 2024 · ArcGIS Online · Python</p>
   <p class="hero-desc">
-    An interactive map of <strong>66,623 crashes</strong> in which someone was injured or killed on Queensland roads,
-    built to show where the most serious crashes happen and in what conditions.
+    Two interactive maps built from five years of Queensland crash data: a close look at where <strong>fatal crashes cluster in Brisbane</strong>,
+    and a statewide view of all <strong>66,623 injury crashes</strong>, built to show where the most serious crashes happen and in what conditions.
   </p>
   <div class="hero-actions">
     <a href="index.html#projects" class="btn btn-ghost">← All projects</a>
-    <a href="https://www.arcgis.com/home/item.html?id=acc4391011334e1a8e892eb1100833b2" target="_blank" rel="noopener" class="btn btn-primary">Open in ArcGIS ↗</a>
+    <a href="https://www.arcgis.com/home/item.html?id=d18dd79b8637403699af4baa591b7ce4" target="_blank" rel="noopener" class="btn btn-primary">Open Brisbane map ↗</a>
   </div>
 </header>
 
-<!-- MAP -->
-<div id="map-section">
+<!-- MAP 1: FATAL CRASHES IN BRISBANE (featured) -->
+<div class="map-section" id="map-brisbane">
+  <div class="map-head">
+    <div class="section-label">Featured map — Brisbane</div>
+    <h2 class="map-title">Where fatal crashes cluster in <em>Brisbane.</em></h2>
+    <p class="map-intro">
+      A heat map of fatal crashes in and around Brisbane, highlighting where they are most concentrated.
+      Zoom in and click a crash for its details, or use the basemap gallery to change the background.
+    </p>
+  </div>
+  <div class="map-wrap">
+    <arcgis-embedded-map
+      item-id="d18dd79b8637403699af4baa591b7ce4"
+      portal-url="https://www.arcgis.com"
+      theme="dark"
+      center="152.9262159495923,-27.393548418067155"
+      scale="577790.554289"
+      bookmarks-enabled
+      heading-enabled
+      legend-enabled
+      information-enabled
+      share-enabled
+      basemap-gallery-enabled
+      time-zone-label-enabled
+      aria-label="Interactive heat map of fatal road crashes in Brisbane, 2020 to 2024"></arcgis-embedded-map>
+    <noscript>
+      <p class="map-note">This map needs JavaScript. You can open it directly in ArcGIS Online instead.</p>
+    </noscript>
+  </div>
+  <p class="map-note">Fatal crashes only. <a href="https://www.arcgis.com/home/item.html?id=d18dd79b8637403699af4baa591b7ce4" target="_blank" rel="noopener">Open in ArcGIS Online ↗</a></p>
+</div>
+
+<!-- MAP 2: STATEWIDE (secondary) -->
+<div class="map-section" id="map-queensland">
+  <div class="map-head">
+    <div class="section-label">Statewide view — Queensland</div>
+    <h2 class="map-title">All injury crashes across <em>Queensland.</em></h2>
+    <p class="map-intro">
+      Every injury crash reported across the state from 2020 to 2024, coloured by severity.
+      Zoom in and click a crash for its details. The legend shows how crashes are coloured.
+    </p>
+  </div>
   <div class="map-wrap">
     <arcgis-embedded-map
       item-id="acc4391011334e1a8e892eb1100833b2"
@@ -378,7 +430,7 @@
       <p class="map-note">This map needs JavaScript. You can open it directly in ArcGIS Online instead.</p>
     </noscript>
   </div>
-  <p class="map-note">Zoom in and click a crash for its details. The legend shows how crashes are coloured by severity.</p>
+  <p class="map-note">All severities: fatal, hospitalisation, medical treatment and minor injury. <a href="https://www.arcgis.com/home/item.html?id=acc4391011334e1a8e892eb1100833b2" target="_blank" rel="noopener">Open in ArcGIS Online ↗</a></p>
 </div>
 
 <!-- ABOUT -->
@@ -401,8 +453,9 @@
         speed zone, lighting and time of day are easy to spot.
       </p>
       <p>
-        Each point is one crash, coloured by its most serious outcome: <em>fatal</em>, hospitalisation, medical treatment or minor injury.
-        Clicking a crash opens a pop-up with the crash type, suburb, speed limit, lighting, road surface, time and number of casualties.
+        The statewide map shows each crash as a point, coloured by its most serious outcome: <em>fatal</em>, hospitalisation, medical treatment or minor injury.
+        The Brisbane map narrows in on fatal crashes only and turns them into a heat map, so clusters stand out.
+        Clicking a crash opens a pop-up with its details, such as crash type, suburb, speed limit, lighting, road surface and time.
       </p>
       <p>
         I built it as a portfolio project to practise taking a large public dataset from <strong>raw download to a published, shareable web map</strong>.
@@ -413,7 +466,7 @@
   <div class="figures">
     <div class="stat-card reveal">
       <div class="stat-label">Injury crashes</div>
-      <div class="stat-value">66,623<small>2020 – 2024</small></div>
+      <div class="stat-value">66,623<small>Queensland, 2020 – 2024</small></div>
     </div>
     <div class="stat-card fatal reveal delay-1">
       <div class="stat-label">Fatal crashes</div>
@@ -502,13 +555,13 @@
       <div class="method-num">004</div>
       <div>
         <div class="method-title">Published and designed the map</div>
-        <div class="method-desc">Published to ArcGIS Online as a hosted feature layer, then built the web map with severity symbology, pop-ups, bookmarks and a legend, and embedded it here.</div>
+        <div class="method-desc">Published to ArcGIS Online as a hosted feature layer, then built two web maps from it: a statewide map with severity symbology and a fatal-crash heat map for Brisbane, both with pop-ups, bookmarks and a legend, and embedded them here.</div>
       </div>
     </div>
   </div>
 
   <div class="tags reveal">
-    <span class="tag">Python</span><span class="tag">pandas</span><span class="tag">ArcGIS Online</span><span class="tag">Hosted feature layers</span><span class="tag">Web mapping</span>
+    <span class="tag">Python</span><span class="tag">pandas</span><span class="tag">ArcGIS Online</span><span class="tag">Hosted feature layers</span><span class="tag">Heat maps</span><span class="tag">Web mapping</span>
   </div>
 </section>
 
